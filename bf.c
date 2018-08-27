@@ -4,9 +4,10 @@
 #include "libString.h"
 
 #define BUF_SIZE 30000L
-#define PROG_SIZE 3000L
+#define PROG_SIZE 30000L
 
 int debug;
+int execute;
 
 int 
 load(Biobuf *pf, int max, int *prog) {
@@ -74,13 +75,6 @@ stack_empty(Stack *stack) {
 	return(stack->ptr == 0);
 }
 
-void 
-consume(int *prog, int *tape, Stack *stack) {
-	int i;
-	stack_push(&stack, pc);
-
-}
-
 void
 main(int argc, char **argv)
 {
@@ -90,22 +84,20 @@ main(int argc, char **argv)
 	Biobuf  bin;
 	char tape[BUF_SIZE];
 	int ptr, op, pc, d;
-	debug = 1;
+	debug = 0;
+	execute = 1;
 
 	memset(tape, 0, BUF_SIZE);
     Binit(&bin, 0, OREAD);
 
 	if (argc != 2)
 		exits("no program file\n");
-
-	
 	
 	pf = Bopen(argv[1], OREAD);
 	if (!pf)
 		exits("could not open file\n");
 		
 	load(pf, PROG_SIZE, prog);
-	print("as %c\n", prog[0]);
 	ptr = pc = 0;
 	stack_create(&stack, 256);
 
@@ -114,57 +106,41 @@ main(int argc, char **argv)
 
 		switch(op) {
 			case '>':
-				ptr++;
+				if (execute) ptr++;
 				break;
 			case '<':
-				ptr--;
+				if (execute) ptr--;
 				break;
 			case '+':
-				tape[ptr]++;
+				if (execute) tape[ptr]++;
 				break;
 			case '-':
-				tape[ptr]--;
+				if (execute) tape[ptr]--;
 				break;
 			case '.':
-				print("%c", tape[ptr]);
+				if (execute) print("%c", tape[ptr]);
 				break;
 			case ',':
-				tape[ptr] = Bgetc(&bin);
+				if (execute) (tape[ptr] = Bgetc(&bin));
 				break;
 			case '[':
-				if (tape[ptr]) {
-
-				} else {
-
-				}
+				stack_push(&stack, pc);
+				if (execute) execute = tape[ptr];
 				break;
 			case ']':
 				stack_pop(&stack, &d);
+				if (execute) {
+					pc = d;
+					continue;
+				} 
+				if (stack_empty(&stack)) {
+					execute = 1;
+				}
 				break;
 			default: 
 				break;
 		}
 		pc++;
 	}
-
-	dump(tape, 100);
-
-	/*
-	int i;
-	for(i = 0; i < 30000L; i++) {
-		print("%d %d\n", i, buffer[i]);
-	}
-	//string = s_new();
-
-	//s_read_line(in, string);
-	//s_read(in, string, 10);
-
-	line = Brdline(&bin, '\n');
-
-	print("%s", line);
-
-	Bterm(&bin);
-	exits(0);
-	*/
 }
 
