@@ -3,18 +3,22 @@
 #include "bio.h"
 #include "libString.h"
 
-#define BUF_SIZE 30000L
-#define PROG_SIZE 30000L
+enum {
+	TAPESIZE = 30000L,
+	PROGSIZE = 30000L
+};
 
 int debug;
-int execute;
+int test;
+char *e;
 
 int 
-load(Biobuf *pf, int max, int *prog) {
+load(Biobuf *pf, int max, int *prog) 
+{
 	int i, c;
 
 	i = 0;
-	while((c = Bgetc(pf)) != Beof && i < max - 1) {
+	while((c = Bgetc(pf)) != Beof && i < max - 1){
 		prog[i++] = c;
 	}
 	prog[i] = Beof;
@@ -22,125 +26,187 @@ load(Biobuf *pf, int max, int *prog) {
 }
 
 void 
-dump(char *tape, int limit) {
+dump(char *tape, int lower, int upper) 
+{
 	int i;
 
-	for(i = 0; i < limit; i++) {
-		print("%d", tape[i]);
-		if (i && i % 80 == 0) 
-			print("\n");
+	for(i = lower; i < upper; i++){
+		fprint(2, "%d\t%d\n", i, tape[i]);
 	}
-	print("\n");
 }
 
-enum { STACK_OK, STACK_OVR, STACK_UND };
+enum { 
+	STACKDEPTH = 32
+};
 struct Stack {
 	int ptr;
-	int max;
-	int *buffer;
+	int buffer[STACKDEPTH];
 };
 typedef struct Stack Stack;
 
 
-void
-stack_create(Stack *stack, int max){
-	stack->buffer = malloc(sizeof(int) * max); 
-	stack->max = max;
-	stack->ptr = 0;
-}
-
-void 
-stack_destroy(Stack *stack){
-	free(stack->buffer);
-}
 
 int 
-stack_push(Stack *stack, int d) {
-	if (!(stack->ptr < stack->max - 1))
-		return STACK_OVR;
+push(Stack *stack, int d) 
+{
+	if(!(stack->ptr < STACKDEPTH - 1))
+		return 0;
 	stack->buffer[stack->ptr++] = d;
-	return STACK_OK;
+	return 1;
 }
 
 int 
-stack_pop(Stack *stack, int *d) {
-	if (stack->ptr == 0)
-		return STACK_UND;
+pop(Stack *stack, int *d) 
+{
+	if(stack->ptr == 0)
+		return 0;
 	*d = stack->buffer[--stack->ptr];
-	return STACK_OK;
+	return 1;
 }
 
 int
-stack_empty(Stack *stack) {
+empty(Stack *stack) 
+{
 	return(stack->ptr == 0);
+}
+
+void *
+emalloc(int n) 
+{
+	void *ptr;
+
+	ptr = mallocz(n, 1);
+	if (ptr == nil) {
+		exits(0);
+	}
+	return ptr;
+}
+
+
+void 
+bf(int *prog, char *tape) 
+{
+	Biobuf  bin;
+	Stack *stack;
+	int execute;
+	int ptr, op, pc, n, ok;
+
+    Binit(&bin, 0, OREAD);
+	stack = emalloc(sizeof(Stack));
+	execute = 1;
+	ptr = pc = 0;
+
+	while((op = prog[pc]) != Beof) {
+		if (debug) print("op: %c\n", op);
+		switch(op){
+		case '>': if(execute) ptr++; break;
+		case '<': if(execute) ptr--; break;
+		case '+': if(execute) tape[ptr]++; break;
+		case '-': if(execute) tape[ptr]--; break;
+		case '.': if(execute) print("%c", tape[ptr]); break;
+		case ',': if(execute) (tape[ptr] = Bgetc(&bin)); break;
+		case '[':
+			if (debug) print("pushed %d\n", pc);
+			ok = push(stack, pc);
+			if (!ok) {
+				e = "stack overflow";
+				return;
+			}
+			if (execute) execute = tape[ptr];
+			break;
+		case ']':
+			ok = pop(stack, &n);
+			if (debug) print("popped %d\n", n);
+			if (!ok) {
+				e = "stack underflow";
+				return;
+			}
+			if(execute){
+				pc = n;
+				continue;
+			} 
+			if (empty(stack))
+				execute = 1;
+			break;
+		default: 
+			break;
+		}
+		pc++;
+	}
+}
+
+void 
+usage(void) 
+{
+	fprint(2, "usage: bf [-dt [upper lower]] file\n");
+	exits("usage");
+}
+
+
+enum { 
+	USAGECODE = 1,
+	OPENCODE = 2,
+	UNDERCODE = 3,
+	OVERCODE = 4,
+};
+/* Need this for Unix */
+int
+exitcode(char *s) 
+{
+	if(strstr(s, "usage"))
+		return USAGECODE;
+	if(strstr(s, "open"))
+		return OPENCODE;
+	if(strstr(s, "stack underflow"))
+		return UNDERCODE;
+	if(strstr(s, "stack overflow"))
+		return OVERCODE;
+	return 1;
 }
 
 void
 main(int argc, char **argv)
 {
 	Biobuf  *pf;
-	Stack stack;
-	int prog[PROG_SIZE];
-	Biobuf  bin;
-	char tape[BUF_SIZE];
-	int ptr, op, pc, d;
-	debug = 0;
-	execute = 1;
+	int prog[PROGSIZE];
+	char tape[TAPESIZE];
+	char *x;
+	int lower, upper;
 
-	memset(tape, 0, BUF_SIZE);
-    Binit(&bin, 0, OREAD);
+	memset(tape, 0, TAPESIZE);
 
-	if (argc != 2)
-		exits("no program file\n");
+	ARGBEGIN {
+	case 'd': 
+		debug++ ; 
+		break;
+	case 't': 
+		x = ARGF();
+		if(x == 0)
+			usage();
+		lower = atoi(x);
+		x = ARGF();
+		if(x == 0)
+			usage();
+		upper = atoi(x);
+		test++ ; 
+		break;
+	default: 
+		usage();
+	} ARGEND
+
+	if(argc != 1)
+		usage();
 	
-	pf = Bopen(argv[1], OREAD);
-	if (!pf)
-		exits("could not open file\n");
-		
-	load(pf, PROG_SIZE, prog);
-	ptr = pc = 0;
-	stack_create(&stack, 256);
 
-	while((op = prog[pc]) != Beof) {
-		if (debug) print("op: %c\n", op);
-
-		switch(op) {
-			case '>':
-				if (execute) ptr++;
-				break;
-			case '<':
-				if (execute) ptr--;
-				break;
-			case '+':
-				if (execute) tape[ptr]++;
-				break;
-			case '-':
-				if (execute) tape[ptr]--;
-				break;
-			case '.':
-				if (execute) print("%c", tape[ptr]);
-				break;
-			case ',':
-				if (execute) (tape[ptr] = Bgetc(&bin));
-				break;
-			case '[':
-				stack_push(&stack, pc);
-				if (execute) execute = tape[ptr];
-				break;
-			case ']':
-				stack_pop(&stack, &d);
-				if (execute) {
-					pc = d;
-					continue;
-				} 
-				if (stack_empty(&stack)) {
-					execute = 1;
-				}
-				break;
-			default: 
-				break;
-		}
-		pc++;
+	pf = Bopen(argv[0], OREAD);
+	if(pf == nil){
+		fprint(2, "bf: could not open %s %r\n", argv[0]);
+		exits("open");
 	}
+		
+	load(pf, PROGSIZE, prog);
+	bf(prog, tape);
+	if (test) dump(tape, lower, upper);
+	exits(e);
 }
 
