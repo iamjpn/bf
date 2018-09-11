@@ -36,7 +36,7 @@ dump(char *tape, int lower, int upper)
 }
 
 enum { 
-	STACKDEPTH = 32
+	STACKDEPTH = 256 
 };
 struct Stack {
 	int ptr;

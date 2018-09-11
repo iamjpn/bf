@@ -1,0 +1,32 @@
+#!/usr/local/plan9port/bin/rc
+# Simple script to run the tests in tests folder
+# Each test needs a bf file, an input, expected output and expected error 
+
+# Want to use the plan9 commands
+. 9.rc
+
+fn runtest {
+    testname = `{echo $1 | ssam 's/.b//'}
+    expectedout = `{echo $1 | ssam 's/.b/.out/'}
+    expectederr = `{echo $1 | ssam 's/.b/.err/'}
+    testinput = `{echo $1 | ssam 's/.b/.in/'}
+    ./bf $1 <[0]$testinput >[1]tests/out >[2]tests/err;
+    cmp -s ./tests/err $expectederr
+    if (! ~ $status '') {
+        echo $testname : stderr incorrect 
+        exit 2
+    }
+    cmp -s ./tests/out $expectedout
+    if (! ~ $status '') {
+        echo $testname : stdout incorrect 
+        exit 1
+    }
+    rm tests/out
+    rm tests/err
+    echo $testname : passed 
+}
+
+for (i in tests/*.b) {
+    runtest $i
+}
+
