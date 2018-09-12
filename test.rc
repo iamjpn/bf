@@ -6,10 +6,10 @@
 . 9.rc
 
 fn runtest {
-    testname = `{echo $1 | ssam 's/.b//'}
-    expectedout = `{echo $1 | ssam 's/.b/.out/'}
-    expectederr = `{echo $1 | ssam 's/.b/.err/'}
-    testinput = `{echo $1 | ssam 's/.b/.in/'}
+    testname = `{echo $1 | ssam 's/\.b$//'}
+    expectedout = `{echo $1 | ssam 's/\.b$/.out/'}
+    expectederr = `{echo $1 | ssam 's/\.b$/.err/'}
+    testinput = `{echo $1 | ssam 's/\.b$/.in/'}
     ./bf $1 <[0]$testinput >[1]tests/out >[2]tests/err;
     cmp -s ./tests/err $expectederr
     if (! ~ $status '') {
