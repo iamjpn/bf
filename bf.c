@@ -1,10 +1,13 @@
+/*
+ * bf -- bf interpretor 
+ */
 #include "u.h"
 #include "libc.h"
 #include "bio.h"
 #include "libString.h"
 
 enum {
-	TAPESIZE = 30000L,
+	TAPESIZE = 30000L, /* bf specification */
 	PROGSIZE = 30000L
 };
 
@@ -12,6 +15,7 @@ int debug;
 int test;
 char *e;
 
+/* copies contains of a file into array */
 int 
 load(Biobuf *pf, int max, int *prog) 
 {
@@ -25,6 +29,7 @@ load(Biobuf *pf, int max, int *prog)
 	return 0;
 }
 
+/* prints an array of numbers, one per line */
 void 
 dump(char *tape, int lower, int upper) 
 {
@@ -36,7 +41,7 @@ dump(char *tape, int lower, int upper)
 }
 
 enum { 
-	STACKDEPTH = 256 
+	STACKDEPTH = 256 /* arbitrary */
 };
 struct Stack {
 	int ptr;
@@ -45,7 +50,10 @@ struct Stack {
 typedef struct Stack Stack;
 
 
-
+/*
+ * add d to top of stack 
+ * returns 0 if stack is full 
+ */
 int 
 push(Stack *stack, int d) 
 {
@@ -55,6 +63,11 @@ push(Stack *stack, int d)
 	return 1;
 }
 
+/*
+ * sets d to have value of top of stack
+ * decrements top of stack
+ * returns 0 if stack is empty
+ */
 int 
 pop(Stack *stack, int *d) 
 {
@@ -64,6 +77,7 @@ pop(Stack *stack, int *d)
 	return 1;
 }
 
+/* check if stack is empty */
 int
 empty(Stack *stack) 
 {
@@ -83,6 +97,7 @@ emalloc(int n)
 }
 
 
+/* interprets prog, using tape as memory */
 void 
 bf(int *prog, char *tape) 
 {
