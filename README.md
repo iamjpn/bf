@@ -1,8 +1,8 @@
 # bf
-A simple bf interpreter using plan9 libraries
+A simple bf interpreter for plan9 
 
 ## Building
-1. Install plan9port https://github.com/9fans/plan9port
+1. Install plan9
 2. Run `mk bf`
 
 ## Usage
