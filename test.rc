@@ -1,9 +1,7 @@
-#!/usr/local/plan9port/bin/rc
+#!/bin/rc
 # Simple script to run the tests in tests folder
 # Each test needs a bf file, an input, expected output and expected error 
 
-# Want to use the plan9 commands
-. 9.rc
 
 fn runtest {
     testname = `{echo $1 | ssam 's/\.b$//'}

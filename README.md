@@ -6,7 +6,7 @@ A simple bf interpreter using plan9 libraries
 2. Run `mk bf`
 
 ## Usage
-To interpret foo.b, a bf file run 
+To interpret foo.b, a bf file, run 
 `./bf foo.b`
 
 ## Tests

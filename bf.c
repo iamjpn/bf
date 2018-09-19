@@ -4,7 +4,7 @@
 #include "u.h"
 #include "libc.h"
 #include "bio.h"
-#include "libString.h"
+#include "String.h"
 
 enum {
 	TAPESIZE = 30000L, /* bf specification */
@@ -106,7 +106,7 @@ bf(int *prog, char *tape)
 	int execute;
 	int ptr, op, pc, n, ok;
 
-    Binit(&bin, 0, OREAD);
+	Binit(&bin, 0, OREAD);
 	stack = emalloc(sizeof(Stack));
 	execute = 1;
 	ptr = pc = 0;
@@ -157,27 +157,6 @@ usage(void)
 	exits("usage");
 }
 
-
-enum { 
-	USAGECODE = 1,
-	OPENCODE = 2,
-	UNDERCODE = 3,
-	OVERCODE = 4,
-};
-/* Need this for Unix */
-int
-exitcode(char *s) 
-{
-	if(strstr(s, "usage"))
-		return USAGECODE;
-	if(strstr(s, "open"))
-		return OPENCODE;
-	if(strstr(s, "stack underflow"))
-		return UNDERCODE;
-	if(strstr(s, "stack overflow"))
-		return OVERCODE;
-	return 1;
-}
 
 void
 main(int argc, char **argv)

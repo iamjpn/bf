@@ -1,4 +1,4 @@
  %:    %.c
- 		9c -c $stem.c
-		9l -o $stem $stem.o
+ 		8c -c $stem.c
+		8l -o $stem $stem.8
 
